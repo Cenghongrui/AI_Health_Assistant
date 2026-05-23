@@ -7,7 +7,7 @@
                         <component :is="isComp(item.comp)" :placeholder="item.placeholder"
                             v-model="formData[item.prop]">
                             <template v-if="item.comp === 'select'">
-                                <el-option v-for="option in item.options" :key="option.value" :label="option.label"
+                                <el-option v-for="option in item.options || []" :key="option.value" :label="option.label"
                                     :value="option.value" />
                             </template>
                         </component>
@@ -28,34 +28,41 @@
 
 <script setup lang="ts">
     import { ref, reactive, computed } from 'vue'
+    import type { FormInstance } from 'element-plus'
+    import type { SearchFormCol, SearchFormModel, TableSearchItem } from '@/interface'
 
-    const props = defineProps({
-        formItem: {
-            type: Array,
-            default: () => []
-        },
+    const props = withDefaults(defineProps<{
+        formItem: TableSearchItem[]
+    }>(), {
+        formItem: () => []
     })
 
-    const emit = defineEmits(['search'])
+    const emit = defineEmits<{
+        (event: 'search', formData: SearchFormModel): void
+    }>()
 
-    const formItemAttrs = computed(() => {
-        const { formItem } = props
-        formItem.forEach(item => {
-            item.col = { xs: 24, sm: 12, md: 8, lg: 6, xl: 6 }
-        })
-        return formItem
+    const defaultCol: SearchFormCol = { xs: 24, sm: 12, md: 8, lg: 6, xl: 6 }
+
+    const formItemAttrs = computed<TableSearchItem[]>(() => {
+        return props.formItem.map((item) => ({
+            ...item,
+            col: item.col ?? defaultCol,
+        }))
     })
 
 
-    const ruleFormRef = ref()
+    const ruleFormRef = ref<FormInstance>()
     
-    const formData = reactive({})
+    const formData = reactive<SearchFormModel>({})
     const isComp = (comp: string) => {
         if (comp === 'input') {
-            return 'elInput'
-        } else if (comp === 'select') {
-            return 'elSelect'
+            return 'el-input'
         }
+        if (comp === 'select') {
+            return 'el-select'
+        }
+
+        return 'el-input'
     }
 
     const handleSearch = () => {
@@ -63,7 +70,7 @@
         emit('search', formData)
     }
 
-    const handleReset = (formRef: any) => {
+    const handleReset = (formRef?: FormInstance) => {
         if(!formRef) return
         formRef.resetFields()
         emit('search', formData)

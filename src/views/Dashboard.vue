@@ -112,6 +112,7 @@
   import { getAnalysisOverview } from "@/api/admin";
   import { onMounted, ref, reactive } from "vue";
   import * as echarts from 'echarts'
+  import type { AnalysisOverview } from '@/interface'
 
   //图标引入
   const iconURL1 = new URL('@/assets/images/users.png', import.meta.url).href
@@ -120,7 +121,26 @@
   const iconURL4 = new URL('@/assets/images/smile.png', import.meta.url).href
 
 
-  const aiData = ref<any>({})
+  const createEmptyAnalysisOverview = (): AnalysisOverview => ({
+    systemOverview: {
+      totalUsers: 0,
+      activeUsers: 0,
+      totalDiaries: 0,
+      todayNewDiaries: 0,
+      totalSessions: 0,
+      todayNewSessions: 0,
+      avgMoodScore: 0,
+    },
+    emotionTrend: [],
+    consultationStats: {
+      totalSessions: 0,
+      avgDurationMinutes: 0,
+      dailyTrend: [],
+    },
+    userActivity: [],
+  })
+
+  const aiData = ref<AnalysisOverview>(createEmptyAnalysisOverview())
 
 
   //初始化图表
@@ -131,8 +151,8 @@
   }
 
   //情绪趋势
-  let emotionChart: any = null
-  const emotionChartRef = ref<any>(null)
+  let emotionChart: echarts.ECharts | null = null
+  const emotionChartRef = ref<HTMLDivElement | null>(null)
   const initEmotionChart = () => {
     if (!emotionChartRef.value) return
     //销毁现有的图表
@@ -234,8 +254,8 @@
   }
 
   //咨询会话统计
-  let consultationChart: any = null
-  const consultationChartRef = ref<any>(null)
+  let consultationChart: echarts.ECharts | null = null
+  const consultationChartRef = ref<HTMLDivElement | null>(null)
   const initConsultationChart = () => {
     if (!consultationChartRef.value) return
     //销毁现有的图表
@@ -357,8 +377,8 @@
   }
 
   //用户活跃度趋势
-  let activeChart: any = null
-  const userActivityChartRef = ref<any>(null)
+  let activeChart: echarts.ECharts | null = null
+  const userActivityChartRef = ref<HTMLDivElement | null>(null)
   const initUserActivityChart = () => {
     if (!userActivityChartRef.value) return
     //销毁现有的图表
@@ -510,7 +530,7 @@
 
 
   onMounted(() => {
-    getAnalysisOverview().then((res: any) => {
+    getAnalysisOverview().then((res) => {
       console.log(res)
       aiData.value = res
       initChart()

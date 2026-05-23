@@ -203,6 +203,14 @@
     import { ElMessage } from 'element-plus'
     import MarkdownRenderer from '@/components/MarkdownRenderer.vue'
     import { fetchEventSource } from '@microsoft/fetch-event-source'
+    import type {
+        ChatMessage,
+        ChatSession,
+        CurrentSession,
+        EmotionAnalysis,
+        StartSessionRequest,
+        StreamChunk,
+    } from '@/interface'
 
 
     const iconUrl1 = new URL('@/assets/images/robot-fill.png', import.meta.url).href
@@ -213,7 +221,7 @@
     //新建会话
     const createNewSession = () => {
         //创建新会话对象
-        const newSession = {
+        const newSession: CurrentSession = {
             sessionId: `temp_${Date.now()}`,
             status: 'TEMP',
             sessionTitle: '新会话',
@@ -224,11 +232,11 @@
         isAiTyping.value = false  // 重置AI输入状态
     }
     //定义当前会话对象
-    const currentSession = ref<any>(null)
-    const sessionHistoryList = ref<any>([])
+    const currentSession = ref<CurrentSession | null>(null)
+    const sessionHistoryList = ref<ChatSession[]>([])
 
     //定义对话消息
-    const messages = ref<any>([])
+    const messages = ref<ChatMessage[]>([])
 
     const userMessage = ref('')
 
@@ -236,16 +244,17 @@
 
 
     //情绪花园
-    const currentEmotion = ref<any>({
+    const currentEmotion = ref<EmotionAnalysis>({
         primaryEmotion: '中性',
         emotionScore: 50,
         isNegative: false,
         riskLevel: 0,
         suggestion: '情绪状态平稳正常',
+        riskDescription: '',
         improvementSuggestions: [],
     })
 
-    const loadSessionEmotion =  (sessionId: string) => {
+    const loadSessionEmotion =  (sessionId: string | number) => {
         //判断格式是否正确
         const id = sessionId.toString().startsWith('session_') ? sessionId : `session_${sessionId}`
 
@@ -285,7 +294,7 @@
         sendUserMessage()
     }
 
-    const handleKeyDownEvent = (e) => {
+    const handleKeyDownEvent = (e: KeyboardEvent) => {
         if (e.key === 'Enter' && !e.shiftKey) {
             e.preventDefault()
             sendMessage()
@@ -303,9 +312,15 @@
 
         const message = userMessage.value.trim()
         userMessage.value = ''
+        const session = currentSession.value
+        if (!session) {
+            createNewSession()
+            startNewSession(message)
+            return
+        }
 
         //如果是新会话,则需要创建会话
-        if (currentSession.value.status === 'TEMP') {
+        if (session.status === 'TEMP') {
             startNewSession(message)
         } else {
             //继续现有会话
@@ -316,23 +331,26 @@
                 createdAt: new Date().toISOString(),
             })
             //开始流式对话
-            startAiResponse(currentSession.value.sessionId, message)
+            startAiResponse(session.sessionId, message)
         }
 
     }
 
     const startNewSession = (message: string) => {
         //构建会话参数
-        const sessionParams = {
+        const session = currentSession.value
+        if (!session) return
+
+        const sessionParams: StartSessionRequest = {
             initialMessage: message,
             sessionTitle: '',
         }
 
-        if (currentSession.value.sessionTitle === '新会话') {
+        if (session.sessionTitle === '新会话') {
             sessionParams.sessionTitle = `宁度AI - ${new Date().toLocaleString()}`
         } else {
             //如果是历史会话,则使用历史会话标题
-            sessionParams.sessionTitle = currentSession.value.sessionTitle
+            sessionParams.sessionTitle = session.sessionTitle
         }
 
 
@@ -340,7 +358,7 @@
         startSession(sessionParams).then((res) => {
             console.log(res)
             //将后端返回的数据转为前端需要的格式
-            const sessionData = {
+            const sessionData: CurrentSession = {
                 sessionId: res.sessionId,
                 status: res.status,
                 sessionTitle: sessionParams.sessionTitle,
@@ -365,7 +383,9 @@
             })
 
             //开始流式对话
-            startAiResponse(currentSession.value.sessionId, message)
+            if (currentSession.value) {
+                startAiResponse(currentSession.value.sessionId, message)
+            }
 
         })
     }
@@ -378,7 +398,7 @@
         //开始流式对话
         isAiTyping.value = true
 
-        const aiMessage = {
+        const aiMessage: ChatMessage = {
             id: `ai_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`,
             senderType: 2,
             content: '',
@@ -400,28 +420,31 @@
                 userMessage: userMessage,
             }),
             signal: controller.signal,
-            onopen: (response) => {
+            onopen: async (response) => {
                 console.log(response)
                 //检查响应头是否包含text/event-stream
                 if (response.headers.get('Content-Type') !== 'text/event-stream') {
                     ElMessage.error('连接失败,请稍后重试')
                 }
             },
-            onmessage: (event: any) => {
+            onmessage: (event: { data: string; event?: string }) => {
                 const raw = event.data.trim()
                 if (!raw) return
                 const eventName = event.event
                 const aiMessage = messages.value[messages.value.length - 1]
+                if (!aiMessage) return
                 if (eventName === 'done') {
                     isAiTyping.value = false
                     controller.abort()
                     //开始情绪分析
-                    loadSessionEmotion(currentSession.value.sessionId)
+                    if (currentSession.value) {
+                        loadSessionEmotion(currentSession.value.sessionId)
+                    }
                     return
                 }
-                const payload = JSON.parse(raw)
+                const payload = JSON.parse(raw) as StreamChunk
                 const ok = String(payload.code) === '200'
-                if (ok && payload.data && payload.data.content) {
+                if (ok && payload.data?.content) {
                     aiMessage.content += payload.data.content
                 } else if (!ok) {
                     //错误回复提示
@@ -434,13 +457,16 @@
             },
             onclose: () => {
                 //开始情绪分析
-                loadSessionEmotion(currentSession.value.sessionId)
+                if (currentSession.value) {
+                    loadSessionEmotion(currentSession.value.sessionId)
+                }
             }
         })
     }
 
     //错误处理函数
-    const handleError = (error: any) => {
+    const handleError = (error: unknown) => {
+        console.error(error)
         const aiMessage = messages.value[messages.value.length - 1]
         if (aiMessage) {
             aiMessage.content = 'AI回复失败，请重试'
@@ -461,7 +487,7 @@
     }
 
     //点击会话项,获取会话数据
-    const handleSessionClick = (item: any) => {
+    const handleSessionClick = (item: ChatSession) => {
         //获取会话消息
         getSessionMessages(item.id).then((res) => {
             messages.value = res
@@ -471,7 +497,7 @@
         loadSessionEmotion(item.id)
 
         //更新当前会话
-        const sessionData = {
+        const sessionData: CurrentSession = {
             sessionId: "session_" + item.id,
             status: "ACTIVE",
             sessionTitle: item.sessionTitle,
@@ -480,7 +506,7 @@
     }
 
     //删除会话
-    const handleSessionDelete = (item: any) => {
+    const handleSessionDelete = (item: ChatSession) => {
         deleteSession(item.id).then(() => {
             ElMessage.success('会话删除成功')
             //更新会话列表

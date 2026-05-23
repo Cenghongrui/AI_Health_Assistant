@@ -34,11 +34,13 @@
   </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { ref, reactive, computed, onBeforeUnmount, shallowRef, watch } from 'vue'
 import { ElMessage } from 'element-plus'
 import '@wangeditor/editor/dist/css/style.css'
 import { Editor as WangEditor, Toolbar as WangToolbar } from '@wangeditor/editor-for-vue'
+import type { IDomEditor, IEditorConfig, IToolbarConfig } from '@wangeditor/editor'
+import type { RichTextChangePayload } from '@/interface'
 
 // Props
 const props = defineProps({
@@ -80,20 +82,25 @@ const props = defineProps({
 })
 
 // Emits
-const emit = defineEmits(['update:modelValue', 'change', 'created'])
+const emit = defineEmits<{
+  (event: 'update:modelValue', value: string): void
+  (event: 'change', value: RichTextChangePayload): void
+  (event: 'created', editor: IDomEditor): void
+}>()
 
 // 响应式数据
-const editorRef = shallowRef(null)
+const editorRef = shallowRef<IDomEditor | null>(null)
 const currentCharCount = ref(0)
+const minHeight = computed(() => props.minHeight)
 
 // 计算属性
-const content = computed({
+const content = computed<string>({
   get: () => props.modelValue,
   set: (value) => emit('update:modelValue', value)
 })
 
 // 编辑器配置
-const editorConfig = reactive({
+const editorConfig = reactive<Partial<IEditorConfig>>({
   placeholder: props.placeholder,
   MENU_CONF: {
     fontSize: {
@@ -171,12 +178,12 @@ const editorConfig = reactive({
 })
 
 // 工具栏配置
-const toolbarConfig = reactive({
-  toolbarKeys: props.toolbarKeys
+const toolbarConfig = reactive<Partial<IToolbarConfig>>({
+  toolbarKeys: props.toolbarKeys as string[]
 })
 
 // 方法
-const handleEditorCreated = (editor) => {
+const handleEditorCreated = (editor: IDomEditor) => {
   editorRef.value = editor
   
   // 初始化字数统计
@@ -202,7 +209,7 @@ const handleEditorCreated = (editor) => {
   console.log('富文本编辑器已创建')
 }
 
-const handleEditorChange = (editor) => {
+const handleEditorChange = (editor: IDomEditor) => {
   updateCharCount()
   
   // 触发变更事件
@@ -239,7 +246,7 @@ const getText = () => {
   return editorRef.value ? editorRef.value.getText() : ''
 }
 
-const setHtml = (html) => {
+const setHtml = (html: string) => {
   if (editorRef.value) {
     editorRef.value.setHtml(html)
   }
@@ -251,7 +258,7 @@ const clear = () => {
   }
 }
 
-const insertText = (text) => {
+const insertText = (text: string) => {
   if (editorRef.value) {
     editorRef.value.insertText(text)
   }

@@ -4,6 +4,13 @@ import { defineConfig } from 'vite'
 import vue from '@vitejs/plugin-vue'
 import vueDevTools from 'vite-plugin-vue-devtools'
 
+const apiProxy = {
+  '/api': {
+    target: 'http://159.75.169.224:1235',
+    changeOrigin: true,
+  },
+}
+
 // https://vite.dev/config/
 export default defineConfig({
   plugins: [
@@ -16,11 +23,9 @@ export default defineConfig({
     },
   },
   server: {
-    proxy: {
-      '/api': {
-        target: 'http://159.75.169.224:1235',
-        changeOrigin: true,
-      },
-    },
+    proxy: apiProxy,
+  },
+  preview: {
+    proxy: apiProxy,
   }
 })

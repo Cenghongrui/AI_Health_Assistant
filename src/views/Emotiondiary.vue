@@ -83,6 +83,7 @@
     import { ref, reactive } from 'vue'
     import { dayjs, ElMessage } from 'element-plus'
     import { addEmotionDiary } from '@/api/frontEnd'
+    import type { EmotionDiaryRequest } from '@/interface'
 
 
 
@@ -106,7 +107,13 @@
 
     }
 
-    const diaryForm = reactive({
+    interface EmotionDiaryForm extends Omit<EmotionDiaryRequest, 'moodScore' | 'sleepQuality' | 'stressLevel'> {
+        moodScore: number | null
+        sleepQuality: number | null
+        stressLevel: number | null
+    }
+
+    const diaryForm = reactive<EmotionDiaryForm>({
         diaryDate: dayjs().format('YYYY-MM-DD'),
         moodScore: null,
         dominantEmotion: '',
@@ -129,11 +136,18 @@
     }
 
     const submitForm = () => {
-        if (!diaryForm.moodScore) {
+        if (diaryForm.moodScore === null || diaryForm.sleepQuality === null || diaryForm.stressLevel === null) {
             ElMessage.error('请填写情绪评分')
             return
         }
-        addEmotionDiary(diaryForm).then(() => {
+        const payload: EmotionDiaryRequest = {
+            ...diaryForm,
+            moodScore: diaryForm.moodScore,
+            sleepQuality: diaryForm.sleepQuality,
+            stressLevel: diaryForm.stressLevel,
+        }
+
+        addEmotionDiary(payload).then(() => {
             ElMessage.success('提交成功')
             resetForm()
         })

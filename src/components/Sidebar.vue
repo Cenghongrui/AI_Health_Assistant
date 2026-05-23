@@ -18,8 +18,8 @@
         </div>
       </div>
       <el-menu-item
-        @click="selectMenu"
-        v-for="item in router.options.routes[0].children"
+        @click="selectMenu(item.path)"
+        v-for="item in backendMenuItems"
         :key="item.path"
         :index="item.path"
       >
@@ -34,6 +34,7 @@
 import { computed } from 'vue'
 import { useRouter } from "vue-router";
 import { useAdminStore } from '@/stores/admin'
+import type { RouteRecordRaw } from 'vue-router'
 
 const adminStore = useAdminStore()
 
@@ -42,10 +43,27 @@ const iconUrl = new URL("@/assets/images/robot.png", import.meta.url).href;
 
 const isCollapsed = computed(() => adminStore.isCollapsed)
 
+interface BackendMenuItem {
+  path: string
+  meta: {
+    title: string
+    icon: string
+  }
+}
 
-const selectMenu = (path: any) => {
-  const currentPath: string = router.options.routes[0].path
-  router.push(`${currentPath}/${path.index}`)
+const isBackendMenuItem = (route: RouteRecordRaw): route is BackendMenuItem & RouteRecordRaw => {
+  return typeof route.path === 'string'
+    && typeof route.meta?.title === 'string'
+    && typeof route.meta?.icon === 'string'
+}
+
+const backendMenuItems = computed<BackendMenuItem[]>(() => {
+  const backendRoute = router.options.routes.find((route) => route.path === '/back')
+  return (backendRoute?.children ?? []).filter(isBackendMenuItem)
+})
+
+const selectMenu = (path: string) => {
+  router.push(`/back/${path}`)
 }
 
 </script>

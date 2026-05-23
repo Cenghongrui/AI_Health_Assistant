@@ -1,10 +1,11 @@
 <template>
   <div>
-    <PageHead title="情绪日志"></PageHead>
-    <TableSearch :formItem="formItem" @search="handleSearch"></TableSearch>
-    <el-table :data="tableData" style="width: 100%;margin-top: 25px;">
+    <PageHead title="情绪日志" />
+    <TableSearch :formItem="formItem" @search="handleSearch" />
+
+    <el-table :data="tableData" style="width: 100%; margin-top: 25px;">
       <el-table-column prop="id" label="ID" width="80" />
-      <el-table-column label="会话ID" width="80">
+      <el-table-column label="用户" width="100">
         <template #default="scope">
           <el-avatar>
             {{ scope.row.nickname }}
@@ -17,13 +18,13 @@
           <el-rate :model-value="scope.row.moodScore" :max="10" disabled />
         </template>
       </el-table-column>
-      <el-table-column label="生活指标" width="120">
+      <el-table-column label="生活指标" width="140">
         <template #default="scope">
           <p>睡眠：{{ scope.row.sleepQuality }}/5</p>
           <p>压力：{{ scope.row.stressLevel }}/5</p>
         </template>
       </el-table-column>
-      <el-table-column prop="emotionTriggers" label="情绪触发因素" width="120" />
+      <el-table-column prop="emotionTriggers" label="情绪触发因素" width="140" />
       <el-table-column prop="diaryContent" label="日记内容" />
       <el-table-column label="操作" width="180" fixed="right">
         <template #default="scope">
@@ -33,8 +34,14 @@
       </el-table-column>
     </el-table>
 
-    <el-pagination layout="prev, pager, next" :total="pagination.total" :page-size="pagination.size"
-      :current-page="pagination.currentPage" @size-change="handleSizeChange" @current-change="handleCurrentChange" />
+    <el-pagination
+      layout="prev, pager, next"
+      :total="pagination.total"
+      :page-size="pagination.size"
+      :current-page="pagination.currentPage"
+      @size-change="handleSizeChange"
+      @current-change="handleCurrentChange"
+    />
 
     <el-dialog v-model="showDetailDialog" title="情绪日志详情" width="800px" :close-on-click-modal="false">
       <div class="detail-content" v-if="currentRow">
@@ -47,20 +54,21 @@
             <el-descriptions-item label="记录日期">{{ currentRow.diaryDate }}</el-descriptions-item>
           </el-descriptions>
         </div>
+
         <div class="detail-section">
-          <h4>情绪状态:</h4>
+          <h4>情绪状态</h4>
           <el-descriptions :column="2" border>
             <el-descriptions-item label="情绪评分">
               <el-rate :model-value="currentRow.moodScore" :max="10" disabled />
             </el-descriptions-item>
             <el-descriptions-item label="主要情绪">
-              <el-tag :type="getEmotionTagType(currentRow.dominantEmotion)">{{ currentRow.dominantEmotion || '-'
-              }}</el-tag>
+              <el-tag :type="getEmotionTagType(currentRow.dominantEmotion)">{{ currentRow.dominantEmotion || '-' }}</el-tag>
             </el-descriptions-item>
             <el-descriptions-item label="睡眠质量">{{ currentRow.sleepQuality }}/5</el-descriptions-item>
             <el-descriptions-item label="压力水平">{{ currentRow.stressLevel }}/5</el-descriptions-item>
           </el-descriptions>
         </div>
+
         <div class="detail-section">
           <h4>日记内容:</h4>
           <el-descriptions :column="1" border>
@@ -68,29 +76,35 @@
             <el-descriptions-item label="日记内容">{{ currentRow.diaryContent }}</el-descriptions-item>
           </el-descriptions>
         </div>
+
         <div class="detail-section">
-          <h4>AI情绪分析结果:</h4>
+          <h4>AI 情绪分析结果:</h4>
           <div class="ai-analysis-result">
             <el-descriptions :column="2" border>
               <el-descriptions-item label="主要情绪">
-                <el-tag :type="getAiEmotionTagType(aiEmotionAnalysis.primaryEmotion)">{{
-                  aiEmotionAnalysis.primaryEmotion
-                }}</el-tag>
+                <el-tag :type="getAiEmotionTagType(aiEmotionAnalysis.primaryEmotion)">
+                  {{ aiEmotionAnalysis.primaryEmotion }}
+                </el-tag>
               </el-descriptions-item>
               <el-descriptions-item label="情绪强度">
-                <el-progress :model-value="aiEmotionAnalysis.emotionScore"
-                  :color="getEmotionScoreColor(aiEmotionAnalysis.emotionScore)" :stroke-width="8" />
+                <el-progress
+                  :percentage="aiEmotionAnalysis.emotionScore"
+                  :color="getEmotionScoreColor(aiEmotionAnalysis.emotionScore)"
+                  :stroke-width="8"
+                />
               </el-descriptions-item>
               <el-descriptions-item label="风险等级">
-                <el-tag :type="getRiskLevelTagType(aiEmotionAnalysis.riskLevel)">{{
-                  getRiskLevelText(aiEmotionAnalysis.riskLevel) }}</el-tag>
+                <el-tag :type="getRiskLevelTagType(aiEmotionAnalysis.riskLevel)">
+                  {{ getRiskLevelText(aiEmotionAnalysis.riskLevel) }}
+                </el-tag>
               </el-descriptions-item>
               <el-descriptions-item label="情绪性质">
-                <el-tag :type="aiEmotionAnalysis.isNegative ? 'danger' : 'success'">{{ aiEmotionAnalysis.isNegative
-                  ? '负面情绪'
-                  : '正面情绪' }}</el-tag>
+                <el-tag :type="aiEmotionAnalysis.isNegative ? 'danger' : 'success'">
+                  {{ aiEmotionAnalysis.isNegative ? '负面情绪' : '正面情绪' }}
+                </el-tag>
               </el-descriptions-item>
             </el-descriptions>
+
             <div class="ai-suggestion-section">
               <h5>专业建议：</h5>
               <div class="suggestion-content">{{ aiEmotionAnalysis.suggestion || '无' }}</div>
@@ -101,12 +115,13 @@
             </div>
             <div class="ai-improvements-section">
               <h5>改善建议：</h5>
-              <ul>
+              <ul class="improvement-list">
                 <li v-for="item in aiEmotionAnalysis.improvementSuggestions" :key="item">{{ item }}</li>
               </ul>
             </div>
           </div>
         </div>
+
         <div class="detail-section">
           <h4>时间信息:</h4>
           <el-descriptions :column="2" border>
@@ -115,6 +130,7 @@
           </el-descriptions>
         </div>
       </div>
+
       <template #footer>
         <el-button @click="showDetailDialog = false">关闭</el-button>
       </template>
@@ -123,260 +139,225 @@
 </template>
 
 <script setup lang="ts">
-  import { ref, reactive, onMounted } from 'vue'
-  import PageHead from "@/components/PageHead.vue";
-  import TableSearch from '@/components/TableSearch.vue';
-  import { getEmotionPage, deleteEmotion } from "@/api/admin";
-  import { ElMessage, ElMessageBox } from "element-plus";
+import { ref, reactive, onMounted } from 'vue'
+import PageHead from '@/components/PageHead.vue'
+import TableSearch from '@/components/TableSearch.vue'
+import { getEmotionPage, deleteEmotion } from '@/api/admin'
+import { ElMessage, ElMessageBox } from 'element-plus'
+import type {
+  EmotionAnalysis,
+  EmotionDiary,
+  PaginationState,
+  SearchFormModel,
+  TableSearchItem,
+} from '@/interface'
 
+type TagType = 'success' | 'info' | 'warning' | 'danger'
 
+const createDefaultEmotionAnalysis = (): EmotionAnalysis => ({
+  primaryEmotion: '',
+  emotionScore: 0,
+  isNegative: false,
+  riskLevel: 0,
+  suggestion: '',
+  riskDescription: '',
+  improvementSuggestions: [],
+})
 
-  const getEmotionTagType = (emotion: string) => {
-    const emotionTypes = {
-      '快乐': 'success',
-      '平静': 'info',
-      '兴奋': 'warning',
-      '愤怒': 'danger',
-      '悲伤': 'info',
-      '焦虑': 'warning'
+const getEmotionTagType = (emotion?: string): TagType => {
+  const emotionTypes: Record<string, TagType> = {
+    快乐: 'success',
+    平静: 'info',
+    兴奋: 'warning',
+    愤怒: 'danger',
+    悲伤: 'info',
+    焦虑: 'warning',
+  }
+
+  return emotion ? emotionTypes[emotion] ?? 'info' : 'info'
+}
+
+const getAiEmotionTagType = (emotion: string): TagType => {
+  const emotionTagMap: Record<string, TagType> = {
+    快乐: 'success',
+    平静: 'success',
+    兴奋: 'warning',
+    满足: 'success',
+    愤怒: 'danger',
+    悲伤: 'info',
+    焦虑: 'warning',
+    恐惧: 'danger',
+    沮丧: 'info',
+    压力: 'warning',
+  }
+
+  return emotionTagMap[emotion] ?? 'info'
+}
+
+const getEmotionScoreColor = (score: number) => {
+  if (score >= 80) return '#f56c6c'
+  if (score >= 60) return '#e6a23c'
+  if (score >= 40) return '#909399'
+  return '#67c23a'
+}
+
+const getRiskLevelTagType = (riskLevel: number): TagType => {
+  const riskTagMap: Record<number, TagType> = {
+    0: 'success',
+    1: 'info',
+    2: 'warning',
+    3: 'danger',
+  }
+
+  return riskTagMap[riskLevel] ?? 'info'
+}
+
+const getRiskLevelText = (riskLevel: number) => {
+  const riskTextMap: Record<number, string> = {
+    0: '正常',
+    1: '关注',
+    2: '预警',
+    3: '危机',
+  }
+
+  return riskTextMap[riskLevel] ?? '未知风险等级'
+}
+
+const formItem = reactive<TableSearchItem[]>([
+  { comp: 'input', prop: 'userID', label: '用户ID', placeholder: '请输入用户ID' },
+  {
+    comp: 'select',
+    prop: 'moodScoreRange',
+    label: '情绪评分',
+    placeholder: '请选择情绪评分范围',
+    options: [
+      { label: '低分（1-3 分）', value: '1-3' },
+      { label: '中分（4-6 分）', value: '4-6' },
+      { label: '高分（7-10 分）', value: '7-10' },
+    ],
+  },
+])
+
+const tableData = ref<EmotionDiary[]>([])
+const pagination = reactive<PaginationState>({
+  currentPage: 1,
+  size: 10,
+  total: 0,
+})
+
+const handleSearch = async (formData: SearchFormModel = {}) => {
+  const params = {
+    ...pagination,
+    ...formData,
+  }
+
+  const { records, total } = await getEmotionPage(params)
+  tableData.value = records
+  pagination.total = total
+}
+
+const handleSizeChange = (val: number) => {
+  pagination.size = val
+  handleSearch({})
+}
+
+const handleCurrentChange = (val: number) => {
+  pagination.currentPage = val
+  handleSearch({})
+}
+
+const showDetailDialog = ref(false)
+const currentRow = ref<EmotionDiary | null>(null)
+const aiEmotionAnalysis = ref<EmotionAnalysis>(createDefaultEmotionAnalysis())
+
+const parseEmotionAnalysis = (raw?: string): EmotionAnalysis => {
+  if (!raw) return createDefaultEmotionAnalysis()
+
+  try {
+    const data = JSON.parse(raw) as Partial<EmotionAnalysis>
+    return {
+      ...createDefaultEmotionAnalysis(),
+      ...data,
+      improvementSuggestions: Array.isArray(data.improvementSuggestions) ? data.improvementSuggestions : [],
     }
-    return emotionTypes[emotion] || 'info'
+  } catch {
+    return createDefaultEmotionAnalysis()
   }
+}
 
-  const getAiEmotionTagType = (emotion: string) => {
-    const emotionTagMap = {
-      '快乐': 'success',
-      '平静': 'success',
-      '兴奋': 'warning',
-      '满足': 'success',
-      '愤怒': 'danger',
-      '悲伤': 'info',
-      '焦虑': 'warning',
-      '恐惧': 'danger',
-      '沮丧': 'info',
-      '压力': 'warning'
-    }
-    return emotionTagMap[emotion] || 'info'
-  }
+const viewSessionDetail = (row: EmotionDiary) => {
+  currentRow.value = row
+  aiEmotionAnalysis.value = parseEmotionAnalysis(row.aiEmotionAnalysis)
+  showDetailDialog.value = true
+}
 
-  const getEmotionScoreColor = (score: number) => {
-    if (score >= 80) return '#f56c6c'
-    if (score >= 60) return '#e6a23c'
-    if (score >= 40) return '#909399'
-    return '#67c23a'
-  }
-
-  const getRiskLevelTagType = (riskLevel: number) => {
-    const riskTagMap = {
-      0: 'success',
-      1: 'info',
-      2: 'warning',
-      3: 'danger'
-    }
-    return riskTagMap[riskLevel] || 'info'
-  }
-
-  const getRiskLevelText = (riskLevel: number) => {
-    const riskTextMap = {
-      0: '正常',
-      1: '关注',
-      2: '预警',
-      3: '危机'
-    }
-    return riskTextMap[riskLevel] || '未知风险等级'
-  }
-
-
-  const formItem = [
-    { comp: 'input', prop: 'userID', label: '用户ID', placeholder: '请输入用户ID' },
-    {
-      comp: 'select', prop: 'moodScoreRange', label: '情绪评分', placeholder: '请选择情绪评分范围', options: [
-        { label: '低分（1-3分）', value: '1-3' },
-        { label: '中分（4-6分）', value: '4-6' },
-        { label: '高分（7-10分）', value: '7-10' },
-      ]
-    },
-  ]
-
-
-  //列表
-  const tableData = ref<any[]>([])
-
-  //分页
-  const pagination = reactive({
-    currentPage: 1,
-    size: 10,
-    total: 0,
-  })
-
-  const handleSearch = async (formData: any) => {
-    const params = {
-      ...pagination,
-      ...formData
-    }
-
-    const { records, total } = await getEmotionPage(params)
-    tableData.value = records
-    pagination.total = total
-  }
-
-  const handleSizeChange = (val: number) => {
-    pagination.size = val
-    handleSearch({})
-  }
-
-  const handleCurrentChange = (val: number) => {
-    pagination.currentPage = val
-    handleSearch({})
-  }
-
-  // 详情弹窗
-  const showDetailDialog = ref(false)
-  const currentRow = ref(null)
-  const aiEmotionAnalysis = ref(null)
-
-  const viewSessionDetail = (row: any) => {
-    currentRow.value = row
-    if (row.aiEmotionAnalysis) {
-      aiEmotionAnalysis.value = JSON.parse(row.aiEmotionAnalysis)
-    } else {
-      aiEmotionAnalysis.value = {}
-    }
-    showDetailDialog.value = true
-  }
-
-  // 删除
-  const handleDelete = (row: any) => {
-    ElMessageBox.confirm(`确认删除该情绪日志${row.id}吗？`, '确认', {
-      confirmButtonText: '确认删除',
-      cancelButtonText: '取消',
-      type: 'danger'
-    }).then(() => {
-      deleteEmotion(row.id).then((res: any) => {
-        ElMessage.success('删除成功')
-        handleSearch({})
-      })
+const handleDelete = (row: EmotionDiary) => {
+  ElMessageBox.confirm(`确认删除情绪日记 ${row.id} 吗？`, '确认', {
+    confirmButtonText: '确认删除',
+    cancelButtonText: '取消',
+    type: 'warning',
+  }).then(() => {
+    deleteEmotion(row.id).then(() => {
+      ElMessage.success('删除成功')
+      handleSearch({})
     })
-  }
-
-  onMounted(() => {
-    handleSearch({})
   })
+}
 
+onMounted(() => {
+  handleSearch({})
+})
 </script>
 
 <style scoped lang="scss">
-  .detail-content {
-    .detail-section {
-      margin-bottom: 24px;
+.detail-content {
+  .detail-section {
+    margin-bottom: 24px;
 
-      h4 {
-        margin: 0 0 16px 0;
-        color: #303133;
-        font-size: 16px;
-
-        i {
-          margin-right: 8px;
-          color: #409eff;
-        }
-      }
+    h4 {
+      margin: 0 0 16px 0;
+      color: #303133;
+      font-size: 16px;
     }
   }
+}
 
-  // AI分析相关样式
-  .ai-analysis-status {
-    .ai-status-tag {
-      margin-bottom: 4px;
+.ai-analysis-result {
+  .ai-suggestion-section,
+  .ai-risk-section,
+  .ai-improvements-section {
+    margin-top: 16px;
+    padding: 12px;
+    background-color: #f8f9fa;
+    border-radius: 4px;
 
-      i {
-        margin-right: 4px;
-      }
-    }
-
-    .ai-analysis-preview {
-      font-size: 11px;
-      color: #909399;
-      margin-top: 2px;
-    }
-  }
-
-  .ai-analysis-result {
-
-    .ai-keywords-section,
-    .ai-suggestion-section,
-    .ai-risk-section,
-    .ai-improvements-section {
-      margin-top: 16px;
-      padding: 12px;
-      background-color: #f8f9fa;
-      border-radius: 4px;
-
-      h5 {
-        margin: 0 0 8px 0;
-        color: #606266;
-        font-size: 14px;
-        font-weight: 600;
-
-        i {
-          margin-right: 6px;
-          color: #909399;
-        }
-      }
-    }
-
-    .keywords-container {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 6px;
-
-      .keyword-tag {
-        background-color: #e1f3d8;
-        color: #67c23a;
-        border-color: #b3d8a4;
-      }
-    }
-
-    .suggestion-content,
-    .risk-content {
-      line-height: 1.6;
+    h5 {
+      margin: 0 0 8px 0;
       color: #606266;
-      background-color: white;
-      padding: 8px;
-      border-radius: 4px;
-      border: 1px solid #ebeef5;
-    }
-
-    .improvement-list {
-      margin: 0;
-      padding-left: 20px;
-
-      li {
-        margin-bottom: 4px;
-        color: #606266;
-        line-height: 1.5;
-      }
-    }
-
-    .ai-analysis-meta {
-      margin-top: 16px;
-      padding-top: 12px;
-      border-top: 1px solid #ebeef5;
-
-      .analysis-time {
-        margin: 0;
-        font-size: 12px;
-        color: #909399;
-
-        i {
-          margin-right: 4px;
-        }
-      }
-    }
-
-    .el-progress {
-      .el-progress__text {
-        font-size: 12px !important;
-      }
+      font-size: 14px;
+      font-weight: 600;
     }
   }
+
+  .suggestion-content,
+  .risk-content {
+    line-height: 1.6;
+    color: #606266;
+    background-color: white;
+    padding: 8px;
+    border-radius: 4px;
+    border: 1px solid #ebeef5;
+  }
+
+  .improvement-list {
+    margin: 0;
+    padding-left: 20px;
+
+    li {
+      margin-bottom: 4px;
+      color: #606266;
+      line-height: 1.5;
+    }
+  }
+}
 </style>
